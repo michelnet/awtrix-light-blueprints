@@ -1,4 +1,4 @@
-# awtrix-light-blueprints
+# Awtrix Light Blueprints
 Awtrix Light Blueprints for Home Assistant.
 
 ## Awtrix Wheater Infos
