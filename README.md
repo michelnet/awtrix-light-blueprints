@@ -1,2 +1,2 @@
-# awtrix-light-blueprint
+# awtrix-light-blueprints
 Awtrix Light Blueprints
