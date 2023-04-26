@@ -1,0 +1,273 @@
+blueprint:
+  name: Awtrix light Weather App
+  description: Push Weather Information to Awtrix light
+  author: Thomas michelnet.ch
+  domain: automation
+  input:
+    awtrix_device:
+      name: Awtrix light
+      description: Select the Awtrix light
+      selector:
+        device:
+          integration: mqtt
+          manufacturer: Blueforcer
+          model: AWTRIX Light
+          multiple: false
+
+    basetopic:
+      name: Basetopic
+      description: Basetopic is only nessery if you have a special mqtt topic configured on the Awtrix
+      default: "Device"
+      selector:
+        text:
+
+    weather_provider:
+      name: Weather Station
+      description: Select the weather provider to obtain the information
+      selector:
+        entity:
+          domain:
+          - weather
+          multiple: false
+
+    text_color_delimiter:
+      name: Delimiter Text Color
+      description: Select the Text color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+
+
+    show_temperature:
+      name: Show temperature
+      description: Should the temperature be shown?
+      selector:
+        boolean:
+      default: true
+    text_color_temperature_warm:
+      name: Temperature Text Color warm
+      description: Select the Text color warm
+      selector:
+        color_rgb:
+      default: [255,0 ,0]
+
+    text_color_temperature_cold:
+      name: Temperature Text Color cold
+      description: Select the Text color cold
+      selector:
+        color_rgb:
+      default: [0, 84, 173]
+
+    temperature_cold_threshold:
+      name: Cold threshold
+      description: All Temperature values bellow this value will use the cold Color value
+      default: 0
+
+
+
+    show_windspeed:
+      name: Show Wind Speed
+      description: Should the wind speed be shown?
+      selector:
+        boolean:
+      default: true
+
+    text_color_windspeed:
+      name: Wind Speed Text Color
+      description: Select the Text color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+
+    show_humidity:
+      name: Show Humidity
+      description: Should the Humidity be shown?
+      selector:
+        boolean:
+      default: false
+
+
+    text_color_humidity:
+      name: Humidity Text Color
+      description: Select the Text color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+
+
+    show_pressure:
+      name: Show Pressure
+      description: Should the Pressure be shown?
+      selector:
+        boolean:
+      default: true
+
+    text_color_pressure:
+      name: Pressure Text Color
+      description: Select the Text color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+
+
+
+
+    push_icon:
+      name: Push Icon
+      description: Icon behavior
+      selector:
+        select:
+          options:
+            - label: "Icon doesn't move"
+              value: "0"
+            - label: "Icon moves with text and will not appear again"
+              value: "1"
+            - label: "Icon moves with text but appears again when the text starts"
+              value: "2"
+          mode: dropdown
+      default: "0"
+
+    duration:
+      name: Duration (in seconds)
+      description: Sets how long the app should be displayed. 0 is global app time.
+      default: "0"
+    lifetime:
+      name: Lifetime (in seconds)
+      description: Sets how long the app should stay alive before it gets removed from the app cycle automatically. 0 is infinite lifetime.
+      default: "0"
+    position:
+      name: Position
+      description: Position in the Awtrix cycle
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 20
+    appname:
+      name: Appname
+      description: Appname
+      default: "Wheater"
+      selector:
+        text:
+
+
+
+
+
+variables:
+  awtrix: !input awtrix_device
+  weather_provider: !input weather_provider
+  basetopic_text : !input basetopic
+  basetopic: >
+    {%- if (basetopic_text)!="Device" -%}
+    {{basetopic_text}}
+    {% else %}
+    {{ iif( device_attr(awtrix, 'name_by_user') != none, device_attr(awtrix, 'name_by_user'), device_attr(awtrix, 'name') ) }}
+    {%- endif -%}
+
+
+  push_icon: !input push_icon
+  duration: !input duration
+  lifetime: !input lifetime
+  appname: !input appname
+  pos: !input position
+
+  text_color_delimiter: !input text_color_delimiter
+  color_delimiter: >
+    {{ "#%02x%02x%02x" | format(text_color_delimiter[0], text_color_delimiter[1], text_color_delimiter[2]) }}
+
+
+#Temperature
+  show_temperature: !input show_temperature
+  text_color_temperature_cold: !input text_color_temperature_cold
+  text_color_temperature_warm: !input text_color_temperature_warm
+  temperature_cold_treshold: !input temperature_cold_threshold
+
+  color_temperature: >
+    {%- if (temperature_cold_treshold) | int < state_attr(weather_provider, 'temperature') -%}
+    {{ "#%02x%02x%02x" | format(text_color_temperature_warm[0], text_color_temperature_warm[1], text_color_temperature_warm[2]) }}
+    {% else %}
+    {{ "#%02x%02x%02x" | format(text_color_temperature_cold[0], text_color_temperature_cold[1], text_color_temperature_cold[2]) }}
+    {%- endif -%}
+
+
+
+#Windspeed
+  show_windspeed: !input show_windspeed
+  text_color_windspeed: !input text_color_windspeed
+  color_windspeed: >
+    {{ "#%02x%02x%02x" | format(text_color_windspeed[0], text_color_windspeed[1], text_color_windspeed[2]) }}
+
+
+#Pressure
+  show_pressure: !input show_pressure
+  text_color_pressure: !input text_color_pressure
+  color_pressure: >
+    {{ "#%02x%02x%02x" | format(text_color_pressure[0], text_color_pressure[1], text_color_pressure[2]) }}
+
+
+#humidity
+  show_humidity: !input show_humidity
+  text_color_humidity: !input text_color_humidity
+  color_humidity: >
+    {{ "#%02x%02x%02x" | format(text_color_humidity[0], text_color_humidity[1], text_color_humidity[2]) }}
+
+  text: >
+    {% set text = namespace(list=[]) %}
+
+    {%- if (show_temperature) -%}
+    {% set temperature= state_attr(weather_provider, 'temperature') | string + " " + state_attr(weather_provider, 'temperature_unit') | string %}
+    {% set text.list = text.list + [{ "t": temperature, "c": color_temperature }] %}
+    {%- endif -%}
+
+
+    {%- if (show_windspeed) -%}
+    {% set windspeed= state_attr(weather_provider, 'wind_speed') | string + " " + state_attr(weather_provider, 'wind_speed_unit') | string %}
+    {% set text.list = text.list + [{ "t": windspeed, "c": color_windspeed }] %}
+    {%- endif -%}
+
+    {%- if (show_pressure) -%}
+    {% set pressure= state_attr(weather_provider, 'pressure') | string + " " + state_attr(weather_provider, 'pressure_unit') | string %}
+    {% set text.list = text.list + [{ "t": pressure, "c": color_pressure }] %}
+    {%- endif -%}
+
+    {%- if (show_humidity) -%}
+    {% set humidity= state_attr(weather_provider, 'humidity') | string + " %" %}
+    {% set text.list = text.list + [{ "t": humidity, "c": color_humidity }] %}
+    {%- endif -%}
+
+
+    {% for i in range(0, text.list |count ) %}
+
+    {{text.list[i]}}
+    {% if i<(text.list |count)-1  %}
+    ,{
+    "t": " - ",
+    "c": "{{color_delimiter}}"
+    },
+    {%- endif -%}
+
+
+    {% endfor%}
+
+trigger:
+  - platform: state
+    entity_id: !input weather_provider
+    id: Changes
+    enabled: true
+
+action:
+  - service: mqtt.publish
+    data:
+      qos: 0
+      retain: false
+      topic: "{{basetopic}}/custom/{{appname}}"
+      payload: >
+        { 
+          "pos": {{pos}},  
+          "text":[{{text}}],
+          "icon": "w-{{ states(weather_provider) }}",
+          "pushIcon": "{{ push_icon }}",
+          "duration": "{{ duration }}",
+          "lifetime": "{{ lifetime }}"
+        }
