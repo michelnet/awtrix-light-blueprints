@@ -21,9 +21,9 @@ blueprint:
       selector:
         text:
 
-    stock_provider:
-      name: Stock Infos
-      description: Select the Stock infos from Yahoo Finance
+    share_provider:
+      name: Share
+      description: Select the Share infos from Yahoo Finance
       selector:
         entity:
           integration: "yahoofinance"
@@ -37,19 +37,19 @@ blueprint:
       default: [255, 255, 255]
 
 
-    text_color_stock_plus:
+    text_color_share_plus:
       name: Color Postiv
       description: Select the Text color postiv
       selector:
         color_rgb:
-      default: [255,0 ,0]
+      default: [0, 255, 0]
 
-    text_color_stock_minus:
+    text_color_share_minus:
       name: Color Negativ
       description: Select the Text color negativ
       selector:
         color_rgb:
-      default: [0, 84, 173]
+      default: [255,0 ,0]
 
 
     push_icon:
@@ -96,7 +96,7 @@ blueprint:
 
 variables:
   awtrix: !input awtrix_device
-  stock: !input stock_provider
+  share: !input share_provider
   basetopic_text : !input basetopic
   basetopic: >
     {%- if (basetopic_text)!="Device" -%}
@@ -117,26 +117,26 @@ variables:
     {{ "#%02x%02x%02x" | format(text_color_delimiter[0], text_color_delimiter[1], text_color_delimiter[2]) }}
 
 
-  #Stock
-  text_color_stock_minus: !input text_color_stock_minus
+  #share
+  text_color_share_minus: !input text_color_share_minus
   color_minus: >
-    {{ "#%02x%02x%02x" | format(text_color_stock_minus[0], text_color_stock_minus[1], text_color_stock_minus[2]) }}
+    {{ "#%02x%02x%02x" | format(text_color_share_minus[0], text_color_share_minus[1], text_color_share_minus[2]) }}
 
 
-  text_color_stock_plus: !input text_color_stock_plus
+  text_color_share_plus: !input text_color_share_plus
   color_plus: >
-    {{ "#%02x%02x%02x" | format(text_color_stock_plus[0], text_color_stock_plus[1], text_color_stock_plus[2]) }}
+    {{ "#%02x%02x%02x" | format(text_color_share_plus[0], text_color_share_plus[1], text_color_share_plus[2]) }}
 
 
 
   text: >
 
-    {% for i in range(0, stock | count ) %}
+    {% for i in range(0, share | count ) %}
     {
-    "t": "{{state_attr(stock[i], 'symbol').split('.')[0]+" "+ state_attr(stock[i], 'regularMarketChangePercent') | string +"%" }}",
-    "c": "{% if state_attr(stock[i], 'trending')=="down"  %}{{color_minus}}{%- else -%}{{color_plus}} {%- endif -%}"
+    "t": "{{state_attr(share[i], 'symbol').split('.')[0]+" "+ state_attr(share[i], 'regularMarketChangePercent') | string +"%" }}",
+    "c": "{% if state_attr(share[i], 'trending')=="down"  %}{{color_minus}}{%- else -%}{{color_plus}} {%- endif -%}"
     }
-    {% if i<(stock |count)-1  %}
+    {% if i<(share |count)-1  %}
     ,{
     "t": " - ",
     "c": "{{color_delimiter}}"
@@ -147,7 +147,7 @@ variables:
 
 trigger:
   - platform: state
-    entity_id: !input stock_provider
+    entity_id: !input share_provider
     id: Changes
     enabled: true
 
