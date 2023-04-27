@@ -1,0 +1,186 @@
+blueprint:
+  name: Awtrix light 
+  description: Awtrix light Text Script
+  author: Thomas michelnet.ch
+  domain: script
+  input:
+    awtrix_device:
+      name: Awtrix light
+      description: Select the Awtrix light
+      selector:
+        device:
+          integration: mqtt
+          manufacturer: Blueforcer
+          model: AWTRIX Light
+          multiple: false
+
+    basetopic:
+      name: Basetopic
+      description: Basetopic is only nessery if you have a special mqtt topic configured on the Awtrix
+      default: "Device"
+      selector:
+        text:
+
+    retain:
+      name: MQTT Retain
+      description: MQTT Retain, be cerful!
+      selector:
+        boolean:
+      default: false
+
+    text_color:
+      name: Text Color
+      description: Select the Text Color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+
+    background_color:
+      name: Background Color
+      description: Sets a background color
+      selector:
+        color_rgb:
+      default: [0, 0, 0]
+
+    rainbow:
+      name: Rainbow Effect
+      description: Fades each letter in the text differently through the entire RGB spectrum.
+      selector:
+        boolean:
+      default: false
+
+    push_icon:
+      name: Push Icon
+      description: Icon behavior
+      selector:
+        select:
+          options:
+            - label: "Icon doesn't move"
+              value: "0"
+            - label: "Icon moves with text and will not appear again"
+              value: "1"
+            - label: "Icon moves with text but appears again when the text starts"
+              value: "2"
+          mode: dropdown
+      default: "0"
+
+    text_case:
+      name: Text Case
+      description: Text Case
+      selector:
+        select:
+          options:
+            - label: "global setting"
+              value: "0"
+            - label: "forces uppercase"
+              value: "1"
+            - label: "shows as it sent"
+              value: "2"
+          mode: dropdown
+      default: "0"
+
+    position:
+      name: Position
+      description: Position in the Awtrix cycle
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 20
+
+    repeat:
+      name: Repeat
+      description: Sets how many times the text should be scrolled through the matrix before the app ends.	
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 100
+
+    text_offset:
+      name: Text Offset
+      description: Sets an offset for the x position of a starting text.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 34
+    duration:
+      name: Duration (in seconds)
+      description: Sets how long the app should be displayed. 0 is global app time.
+      default: "0"          
+    appname:
+      name: Appname
+      description: Appname
+      selector:
+        text:
+    text:
+      name: Text
+      description: Text to Publish
+      selector:
+        template: 
+    icon:
+      name: icon
+      description: Icon Name
+      selector:
+        template: 
+
+variables:
+  awtrix: !input awtrix_device
+  basetopic_text : !input basetopic
+
+  basetopic: >
+    {%- if (basetopic_text)!="Device" -%}
+    {{basetopic_text}}
+    {% else %}
+    {{ iif( device_attr(awtrix, 'name_by_user') != none, device_attr(awtrix, 'name_by_user'), device_attr(awtrix, 'name') ) }}
+    {%- endif -%}
+  retain_input: !input retain
+  retain: >
+    {{ (retain_input | string).lower() }}    
+  appname: !input appname
+  rainbow_input: !input rainbow
+  rainbow: >
+    {{ (rainbow_input | string).lower() }}
+  push_icon: !input push_icon
+  icon: !input icon
+  text_case: !input text_case
+  text: !input text
+  repeat: !input repeat
+  duration: !input duration
+
+  pos: !input position
+  text_offset: !input text_offset
+  text_color_input: !input text_color
+  text_color: >
+    {{ "#%02x%02x%02x" | format(text_color_input[0], text_color_input[1], text_color_input[2]) }}
+
+  background_color_input: !input background_color
+  background_color: >
+    {{ "#%02x%02x%02x" | format(background_color_input[0], background_color_input[1], background_color_input[2]) }}
+
+
+
+sequence:
+  - service: mqtt.publish
+    data:
+      qos: 0
+      retain: "{{retain}}"
+      topic: "{{basetopic}}/custom/{{appname}}"
+      payload: >
+        {
+          "text": "{{text}}",
+          "textCase": {{text_case}},
+          "textOffset": {{text_offset}},
+          "color": "{{text_color}}",
+          "background": "{{background_color}}",
+          "rainbow": {{rainbow}},
+          "icon": "{{icon}}",
+          "pushIcon": {{push_icon}},
+          "repeat":  {{repeat}},
+          "duration": {{duration}},
+          "pos": {{pos}}
+        }
+
+mode: restart
+
